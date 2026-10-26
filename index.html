@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CoffeeScope</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- HEADER -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="header-brand">
+        <h1>☕ CoffeeScope</h1>
+        <p class="header-desc">Eksplorasi penjualan minuman sesuai tujuan analisismu.</p>
+      </div>
+      <div class="header-actions">
+        <label class="btn btn-primary" for="csvInput" id="csvLabel">
+          📂 Buka CSV
+        </label>
+        <input type="file" id="csvInput" accept=".csv" aria-label="Pilih file CSV" />
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main id="app">
+
+    <!-- WELCOME STATE -->
+    <section id="welcomePanel" class="welcome-panel" aria-live="polite">
+      <div class="welcome-card">
+        <h2>Selamat Datang di CoffeeScope</h2>
+        <p>Dataset <code>index_1.csv</code> sedang dimuat otomatis. Jika halaman ini dibuka melalui <strong>Live Server</strong>, dashboard akan tampil dalam beberapa saat.</p>
+        <ul>
+          <li>Semua perhitungan berjalan langsung di browser Anda.</li>
+          <li>Data tidak dikirim ke mana pun.</li>
+          <li>Gunakan tombol <strong>Buka CSV</strong> untuk memuat dataset lain atau jika pemuatan otomatis gagal.</li>
+        </ul>
+        <p class="muted">Sumber dataset: <a href="https://www.kaggle.com/datasets/ihelon/coffee-sales" target="_blank" rel="noopener">Kaggle — Coffee Sales (ihelon)</a></p>
+      </div>
+    </section>
+
+    <!-- LOAD STATUS -->
+    <div id="loadStatus" class="load-status" role="status" aria-live="polite" hidden></div>
+
+    <!-- DASHBOARD (hidden until CSV loaded) -->
+    <div id="dashboard" hidden>
+
+      <!-- DATASET INFO BAR -->
+      <div class="info-bar" id="infoBar"></div>
+
+      <!-- CONTROLS -->
+      <section class="controls-panel" aria-label="Panel Kontrol Analisis">
+        <h2 class="section-title">Kontrol Analisis</h2>
+        <div class="controls-grid">
+
+          <div class="control-group">
+            <label for="dateStart">Tanggal Mulai</label>
+            <input type="date" id="dateStart" />
+          </div>
+          <div class="control-group">
+            <label for="dateEnd">Tanggal Akhir</label>
+            <input type="date" id="dateEnd" />
+          </div>
+
+          <div class="control-group">
+            <label for="filterCoffee">Jenis Minuman</label>
+            <select id="filterCoffee"></select>
+          </div>
+          <div class="control-group">
+            <label for="filterPayment">Metode Pembayaran</label>
+            <select id="filterPayment"></select>
+          </div>
+
+          <div class="control-group">
+            <label for="metricSelect">Metrik Grafik</label>
+            <select id="metricSelect">
+              <option value="value">Nilai Penjualan</option>
+              <option value="count">Jumlah Transaksi</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <label for="groupingSelect">Pengelompokan Tren</label>
+            <select id="groupingSelect">
+              <option value="daily">Harian</option>
+              <option value="weekly">Mingguan</option>
+              <option value="monthly" selected>Bulanan</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label for="topNSelect">Top N Minuman (Peringkat)</label>
+            <select id="topNSelect">
+              <option value="3">Top 3</option>
+              <option value="5" selected>Top 5</option>
+              <option value="all">Semua</option>
+            </select>
+          </div>
+
+          <div class="control-group target-group">
+            <label for="targetValue">Target (opsional)</label>
+            <div class="target-row">
+              <input type="number" id="targetValue" min="0" step="any" placeholder="Kosongkan jika tidak ada" />
+              <select id="targetMetric" aria-label="Metrik target">
+                <option value="value">Nilai Penjualan</option>
+                <option value="count">Jumlah Transaksi</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="control-group control-reset">
+            <button id="btnReset" class="btn btn-secondary">↺ Reset Filter</button>
+          </div>
+        </div>
+
+        <!-- Active filter summary -->
+        <div id="filterSummary" class="filter-summary" aria-live="polite"></div>
+        <!-- Date error -->
+        <div id="dateError" class="error-msg" role="alert" aria-live="assertive" hidden></div>
+      </section>
+
+      <!-- KPI CARDS -->
+      <section class="kpi-section" aria-label="Ringkasan KPI">
+        <div class="kpi-grid" id="kpiGrid">
+          <div class="kpi-card" id="kpiSales">
+            <span class="kpi-label">Total Nilai Penjualan</span>
+            <span class="kpi-value" id="kpiSalesVal">—</span>
+            <span class="kpi-unit">Nilai mengikuti satuan moneter dataset.</span>
+          </div>
+          <div class="kpi-card" id="kpiTx">
+            <span class="kpi-label">Jumlah Transaksi</span>
+            <span class="kpi-value" id="kpiTxVal">—</span>
+          </div>
+          <div class="kpi-card" id="kpiAvg">
+            <span class="kpi-label">Rata-rata Nilai Transaksi</span>
+            <span class="kpi-value" id="kpiAvgVal">—</span>
+            <span class="kpi-unit">Nilai mengikuti satuan moneter dataset.</span>
+          </div>
+          <div class="kpi-card" id="kpiTypes">
+            <span class="kpi-label">Jenis Minuman</span>
+            <span class="kpi-value" id="kpiTypesVal">—</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- TARGET EVALUATION -->
+      <section id="targetSection" class="target-section" aria-label="Evaluasi Target" hidden>
+        <h2 class="section-title">Evaluasi Target</h2>
+        <div id="targetResult" class="target-result"></div>
+        <p class="muted target-note">Pencapaian dihitung berdasarkan data historis terfilter pada periode analisis aktif.</p>
+      </section>
+
+      <!-- CHARTS -->
+      <section class="charts-section" aria-label="Visualisasi Data">
+        <h2 class="section-title">Visualisasi</h2>
+        <div class="charts-grid">
+          <div class="chart-card full-width">
+            <h3 id="trendTitle" class="chart-title">Tren Penjualan</h3>
+            <div id="chartTrend" class="chart-container" role="img" aria-label="Grafik tren penjualan"></div>
+            <details class="chart-summary">
+              <summary>Lihat data tren</summary>
+              <div id="tableTrend" class="summary-table-wrap"></div>
+            </details>
+          </div>
+          <div class="chart-card">
+            <h3 id="rankTitle" class="chart-title">Peringkat Minuman</h3>
+            <div id="chartRank" class="chart-container" role="img" aria-label="Grafik peringkat minuman"></div>
+            <details class="chart-summary">
+              <summary>Lihat data peringkat</summary>
+              <div id="tableRank" class="summary-table-wrap"></div>
+            </details>
+          </div>
+          <div class="chart-card">
+            <h3 class="chart-title">Aktivitas per Jam</h3>
+            <div id="chartHour" class="chart-container" role="img" aria-label="Grafik aktivitas per jam"></div>
+            <details class="chart-summary">
+              <summary>Lihat data per jam</summary>
+              <div id="tableHour" class="summary-table-wrap"></div>
+            </details>
+          </div>
+          <div class="chart-card">
+            <h3 class="chart-title">Perbandingan Pembayaran</h3>
+            <div id="chartPayment" class="chart-container" role="img" aria-label="Grafik perbandingan pembayaran"></div>
+            <details class="chart-summary">
+              <summary>Lihat data pembayaran</summary>
+              <div id="tablePayment" class="summary-table-wrap"></div>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <!-- TRANSACTION TABLE -->
+      <section class="table-section" aria-label="Tabel Transaksi">
+        <h2 class="section-title">Tabel Transaksi</h2>
+        <div id="tableStatus" class="table-status"></div>
+        <div class="table-wrap">
+          <table id="txTable" aria-label="Data transaksi">
+            <thead>
+              <tr>
+                <th scope="col">Tanggal</th>
+                <th scope="col">Waktu</th>
+                <th scope="col">Minuman</th>
+                <th scope="col">Pembayaran</th>
+                <th scope="col">Nilai</th>
+              </tr>
+            </thead>
+            <tbody id="txBody"></tbody>
+          </table>
+        </div>
+        <div id="pagination" class="pagination" role="navigation" aria-label="Navigasi halaman tabel"></div>
+      </section>
+
+    </div><!-- /#dashboard -->
+  </main>
+
+  <footer class="site-footer">
+    <p>Proyek oleh <strong>Novita Astari Sabrina</strong> &nbsp;·&nbsp; Sumber dataset: <a href="https://www.kaggle.com/datasets/ihelon/coffee-sales" target="_blank" rel="noopener">Kaggle — Coffee Sales (ihelon)</a></p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
